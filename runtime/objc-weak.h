@@ -112,14 +112,19 @@ struct weak_entry_t {
     }
 };
 
+// weak_table_t是一个典型的hash结构。其中 weak_entry_t *weak_entries是一个动态数组，用来存储weak_table_t的数据元素weak_entry_t。剩下的三个元素将会用于hash表的相关操作
 /**
  * The global weak references table. Stores object ids as keys,
  * and weak_entry_t structs as their values.
  */
 struct weak_table_t {
+    // hash数组，用来存储弱引用对象的相关信息
     weak_entry_t *weak_entries;
+    // hash数组的元素个数
     size_t    num_entries;
+    // hash数组长度-1，会参与hash计算。（注意，这里是hash数组的长度，而不是元素个数。比如，数组长度可能是64，而元素个数仅存了2个）
     uintptr_t mask;
+    // 可能会发生hash冲突的最大次数，用于判断是否出现了逻辑错误（hash表中的冲突次数绝不会超过这个值）
     uintptr_t max_hash_displacement;
 };
 

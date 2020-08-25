@@ -105,14 +105,20 @@ enum HaveOld { DontHaveOld = false, DoHaveOld = true };
 enum HaveNew { DontHaveNew = false, DoHaveNew = true };
 
 struct SideTable {
+    // 自旋锁，防止多线程访问安全
     spinlock_t slock;
+    // 对象引用计数表
+    // RefcountMap实质上是一个以objc_object为key的hash表，其vaule就是OC对象的引用计数。同时，当OC对象的引用计数变为0时，会自动将相关的信息从hash表中剔除
     RefcountMap refcnts;
+    // 对象弱引用表
     weak_table_t weak_table;
 
+    // 构造函数
     SideTable() {
         memset(&weak_table, 0, sizeof(weak_table));
     }
 
+    // 稀构函数
     ~SideTable() {
         _objc_fatal("Do not delete SideTable.");
     }
@@ -473,7 +479,7 @@ objc_loadWeakRetained(id *location)
     
  retry:
     // fixme std::atomic this load
-    obj = *location;
+     obj = *location;
     if (!obj) return nil;
     if (obj->isTaggedPointer()) return obj;
     

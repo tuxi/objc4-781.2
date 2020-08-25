@@ -912,13 +912,18 @@ void _objc_atfork_child()
 
 void _objc_init(void)
 {
+    /*
+     在启动 app 的时候， dyld 会对动态库进行加载、链接等一系列动作，之后就会来到 libobjc.A.dylib 库中调用 _objc_init 对类进行处理，通过 map_images 映射出整个镜像文件，再通过 read_images 加载镜像文件，此时类已经加载完成，那其中类的加载的流程又是怎么样的呢？类的属性、方法、协议都是怎么加载的呢
+     */
     static bool initialized = false;
     if (initialized) return;
     initialized = true;
     
     // fixme defer initialization until an objc-using image is found?
+    // 环境变量的初始化
     environ_init();
     tls_init();
+    // 系统级别的 c++ 构造函数调用
     static_init();
     runtime_init();
     exception_init();
