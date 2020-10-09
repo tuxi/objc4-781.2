@@ -7522,16 +7522,21 @@ _class_createInstanceFromZone(Class cls, size_t extraBytes, void *zone,
     ASSERT(cls->isRealized());
 
     // Read class's info bits all at once for performance
+    // hasCxxCtor()是判断当前class或者superclass是否有.cxx_construct 构造方法的实现
     bool hasCxxCtor = cxxConstruct && cls->hasCxxCtor();
+    // hasCxxDtor()是判断判断当前class或者superclass是否有.cxx_destruct 析构方法的实现
     bool hasCxxDtor = cls->hasCxxDtor();
+    // canAllocNonpointer()是具体标记某个类是否支持优化的isa
     bool fast = cls->canAllocNonpointer();
     size_t size;
 
+    // 获取类的大小
     size = cls->instanceSize(extraBytes);
     if (outAllocatedSize) *outAllocatedSize = size;
 
     id obj;
     if (zone) {
+        // 开辟内存
         obj = (id)malloc_zone_calloc((malloc_zone_t *)zone, 1, size);
     } else {
         obj = (id)calloc(1, size);
@@ -7544,10 +7549,12 @@ _class_createInstanceFromZone(Class cls, size_t extraBytes, void *zone,
     }
 
     if (!zone && fast) {
+        // 初始化isa
         obj->initInstanceIsa(cls, hasCxxDtor);
     } else {
         // Use raw pointer isa on the assumption that they might be
         // doing something weird with the zone or RR.
+        // 初始化isa
         obj->initIsa(cls);
     }
 
@@ -7556,6 +7563,7 @@ _class_createInstanceFromZone(Class cls, size_t extraBytes, void *zone,
     }
 
     construct_flags |= OBJECT_CONSTRUCT_FREE_ONFAILURE;
+    // 便利构造
     return object_cxxConstructFromClass(obj, cls, construct_flags);
 }
 
@@ -7674,12 +7682,17 @@ void *objc_destructInstance(id obj)
 {
     if (obj) {
         // Read all of the flags at once for performance.
+        // 判断是否有C++构造函数
         bool cxx = obj->hasCxxDtor();
+        // 判断是否有关联对象
         bool assoc = obj->hasAssociatedObjects();
 
         // This order is important.
+        // 当有C++构造函数时，再判断是否有析构函数
         if (cxx) object_cxxDestruct(obj);
+        // 当有管理对象时，移除关联对象
         if (assoc) _object_remove_assocations(obj);
+        // 清空SideTable弱引用相关
         obj->clearDeallocating();
     }
 

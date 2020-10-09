@@ -1338,6 +1338,7 @@ struct objc_class : objc_object {
 #endif
 
 #if FAST_CACHE_HAS_CXX_CTOR
+    // hasCxxCtor()是判断当前class或者superclass是否有.cxx_construct 构造方法的实现
     bool hasCxxCtor() {
         ASSERT(isRealized());
         return cache.getBit(FAST_CACHE_HAS_CXX_CTOR);
@@ -1346,6 +1347,7 @@ struct objc_class : objc_object {
         cache.setBit(FAST_CACHE_HAS_CXX_CTOR);
     }
 #else
+    // hasCxxCtor()是判断当前class或者superclass是否有.cxx_construct 构造方法的实现
     bool hasCxxCtor() {
         ASSERT(isRealized());
         return bits.data()->flags & RW_HAS_CXX_CTOR;
@@ -1356,6 +1358,7 @@ struct objc_class : objc_object {
 #endif
 
 #if FAST_CACHE_HAS_CXX_DTOR
+    // hasCxxDtor()是判断判断当前class或者superclass是否有.cxx_destruct 析构方法的实现
     bool hasCxxDtor() {
         ASSERT(isRealized());
         return cache.getBit(FAST_CACHE_HAS_CXX_DTOR);
@@ -1364,6 +1367,7 @@ struct objc_class : objc_object {
         cache.setBit(FAST_CACHE_HAS_CXX_DTOR);
     }
 #else
+    // hasCxxDtor()是判断判断当前class或者superclass是否有.cxx_destruct 析构方法的实现
     bool hasCxxDtor() {
         ASSERT(isRealized());
         return bits.data()->flags & RW_HAS_CXX_DTOR;
@@ -1398,6 +1402,7 @@ struct objc_class : objc_object {
     void setInstancesRequireRawIsaRecursively(bool inherited = false);
     void printInstancesRequireRawIsa(bool inherited);
 
+    // canAllocNonpointer()是具体标记某个类是否支持优化的isa
     bool canAllocNonpointer() {
         ASSERT(!isFuture());
         return !instancesRequireRawIsa();
@@ -1595,6 +1600,7 @@ struct objc_class : objc_object {
         return word_align(unalignedInstanceSize());
     }
 
+    // instanceSize()获取类的大小（传入额外字节的大小）
     size_t instanceSize(size_t extraBytes) const {
         if (fastpath(cache.hasFastInstanceSize(extraBytes))) {
             return cache.fastInstanceSize(extraBytes);

@@ -54,6 +54,29 @@
     // uintptr_t lock : 2;        // lock for atomic property, @synch
     // uintptr_t extraBytes : 1;  // allocated with extra bytes
 
+/*
+ isa_t 的 成员说明：
+ nonpointer:
+    0: 代表普通的指针，存储着Class和Meta Class 对象的内存地址
+    1: 代表优化过的isa，使用位域存储更多信息
+ has_assoc：
+    是否有设置关联属性（注意只要曾经设置过），如果没有释放的更快
+ has_cxx_dtor:
+    是否有c++的析构函数(.cxx_destruct)，如果没有释放的更快
+ shiftcls:
+    当nonpointer为1时，存储着Class 和 Meta Class 对象的内存地址
+ magic:
+    用于在调试时，分辨对象释放未完成初始化
+ weakly_referenced:
+    是否被弱引用指向过，如果没有释放的更快
+ deallocating:
+    对象是否正在释放
+ has_sidetable_rc:
+    0: 当引用计数较小时，存储在extra_rc中，此时has_sidetable_rc为0
+    1: 当引用计数过大时，无法存储在isa（extra_rc）中，此时才使用SideTable存储额外的引用计数，has_sidetable_rc为1
+uintptr_t extra_rc          : 8
+ */
+
 # if __arm64__
 #   define ISA_MASK        0x0000000ffffffff8ULL
 #   define ISA_MAGIC_MASK  0x000003f000000001ULL

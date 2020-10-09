@@ -211,6 +211,7 @@ objc_object::initProtocolIsa(Class cls)
     return initClassIsa(cls);
 }
 
+// 初始化isa
 inline void 
 objc_object::initInstanceIsa(Class cls, bool hasCxxDtor)
 {
@@ -419,10 +420,12 @@ objc_object::clearDeallocating()
 {
     if (slowpath(!isa.nonpointer)) {
         // Slow path for raw pointer isa.
+        // 对普通的isa指针
         sidetable_clearDeallocating();
     }
     else if (slowpath(isa.weakly_referenced  ||  isa.has_sidetable_rc)) {
         // Slow path for non-pointer isa with weak refs and/or side table data.
+        // 存在弱引用或者has_sidetable_rc中存储有引用计数，清空若引用
         clearDeallocating_slow();
     }
 
@@ -435,12 +438,14 @@ objc_object::rootDealloc()
 {
     if (isTaggedPointer()) return;  // fixme necessary?
 
+    // 判断是否为普通isa指针，是否没有这四项：弱引用、关联属性、c++析构函数、使用引用计数表sideTable
     if (fastpath(isa.nonpointer  &&  
                  !isa.weakly_referenced  &&  
                  !isa.has_assoc  &&  
                  !isa.has_cxx_dtor  &&  
                  !isa.has_sidetable_rc))
     {
+        // 符合的话，释放的更快
         assert(!sidetable_present());
         free(this);
     } 

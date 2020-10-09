@@ -281,6 +281,7 @@ static void weak_compact_maybe(weak_table_t *weak_table)
 
 
 /**
+ * 从全局弱引用表中移除这个对象所对应的弱引用表
  * Remove entry from the zone's table of weak references.
  */
 static void weak_entry_remove(weak_table_t *weak_table, weak_entry_t *entry)
@@ -289,6 +290,7 @@ static void weak_entry_remove(weak_table_t *weak_table, weak_entry_t *entry)
     if (entry->out_of_line()) free(entry->referrers);
     bzero(entry, sizeof(*entry));
 
+    // 全局弱引用表的长度 - 1
     weak_table->num_entries--;
 
     weak_compact_maybe(weak_table);
@@ -308,12 +310,18 @@ static void weak_entry_remove(weak_table_t *weak_table, weak_entry_t *entry)
 static weak_entry_t *
 weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
 {
+    // referent为当前对象
+    
+    // 这个函数的作用就是在全局弱引用表中，通过对象的内存地址作为key，然后用这个key & weak_table->mask得到一个哈希表的索引值，通过这个索引值在全局弱引用表中(哈希表)找到这个对象的弱引用表
+    
     ASSERT(referent);
-
+    
+    // 指向对象的所有weak指针的集合
     weak_entry_t *weak_entries = weak_table->weak_entries;
 
     if (!weak_entries) return nil;
 
+    // 根据对象的内存址值 & mask 找到一个索引值，也就是说对象的内存地址作为key
     size_t begin = hash_pointer(referent) & weak_table->mask;
     size_t index = begin;
     size_t hash_displacement = 0;
@@ -326,6 +334,7 @@ weak_entry_for_referent(weak_table_t *weak_table, objc_object *referent)
         }
     }
     
+    // 通过索引值index，在全局弱引用表中找到对应的value，这个value就是一个对象的弱引用表
     return &weak_table->weak_entries[index];
 }
 
@@ -451,7 +460,8 @@ weak_is_registered_no_lock(weak_table_t *weak_table, id referent_id)
 #endif
 
 
-/** 
+/**
+ *  ！！！清除弱指针的核心函数
  * Called by dealloc; nils out all weak pointers that point to the 
  * provided object so that they can no longer be used.
  * 
@@ -461,8 +471,13 @@ weak_is_registered_no_lock(weak_table_t *weak_table, id referent_id)
 void 
 weak_clear_no_lock(weak_table_t *weak_table, id referent_id) 
 {
+    // referent_id：待释放的对象
+    // weak_table：弱引用表
+    
+    // 将referent_id强制转换为`(objc_object *)`类型
     objc_object *referent = (objc_object *)referent_id;
 
+    // 通过对象的内存地址在全局弱引用表中找到这个对象的弱引用表(entry)，这个表中存放的都是指向这个对象的弱指针
     weak_entry_t *entry = weak_entry_for_referent(weak_table, referent);
     if (entry == nil) {
         /// XXX shouldn't happen, but does with mismatched CF/objc
@@ -470,12 +485,16 @@ weak_clear_no_lock(weak_table_t *weak_table, id referent_id)
         return;
     }
 
+    // 变量referrers：即为弱指针内存地址的集合
     // zero out references
     weak_referrer_t *referrers;
+    // 这个对象对应的弱引用表的大小
     size_t count;
     
     if (entry->out_of_line()) {
+        // 取出referrers
         referrers = entry->referrers;
+        // 获取对象所对应的弱引用表的长度
         count = TABLE_SIZE(entry);
     } 
     else {
@@ -483,10 +502,15 @@ weak_clear_no_lock(weak_table_t *weak_table, id referent_id)
         count = WEAK_INLINE_COUNT;
     }
     
+    // 遍历这个对象所对应的弱引用表
     for (size_t i = 0; i < count; ++i) {
+        // referrers：弱指针的集合
+        // `*referrer`：为弱引用指针的内存地址
         objc_object **referrer = referrers[i];
+        // 如果内存地址有值
         if (referrer) {
             if (*referrer == referent) {
+                // 将弱引用指针的值赋值为nil，也就是说__weak修饰的对象释放时，将弱指针置为nil就是在此完成的
                 *referrer = nil;
             }
             else if (*referrer) {
@@ -499,7 +523,7 @@ weak_clear_no_lock(weak_table_t *weak_table, id referent_id)
             }
         }
     }
-    
+    // 将这个对象所对应的弱引用表(entry)从全局弱引用表(weak_table)中移除掉
     weak_entry_remove(weak_table, entry);
 }
 

@@ -79,11 +79,14 @@ typedef DisguisedPtr<objc_object *> weak_referrer_t;
 
 struct weak_entry_t {
     DisguisedPtr<objc_object> referent;
+    // 共用体
     union {
         struct {
+            // referrers：为某一个对象的所有弱指针地址的集合
             weak_referrer_t *referrers;
             uintptr_t        out_of_line_ness : 2;
             uintptr_t        num_refs : PTR_MINUS_2;
+            // 这个mask即为一个对象的弱引用表中存储的弱指针的个数 - 1，这个和方法缓存中的缓存列表的长度逻辑一样
             uintptr_t        mask;
             uintptr_t        max_hash_displacement;
         };
@@ -114,6 +117,7 @@ struct weak_entry_t {
 
 // weak_table_t是一个典型的hash结构。其中 weak_entry_t *weak_entries是一个动态数组，用来存储weak_table_t的数据元素weak_entry_t。剩下的三个元素将会用于hash表的相关操作
 /**
+ * weak_table_t为全局弱引用表结构（哈希表数据结构），对象的内存地址作为key，weak_entry_t为value
  * The global weak references table. Stores object ids as keys,
  * and weak_entry_t structs as their values.
  */

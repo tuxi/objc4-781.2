@@ -102,6 +102,7 @@ public:
     // initClassIsa(): class objects
     // initProtocolIsa(): protocol objects
     // initIsa(): other objects
+    // 初始化isa
     void initIsa(Class cls /*nonpointer=false*/);
     void initClassIsa(Class cls /*nonpointer=maybe*/);
     void initProtocolIsa(Class cls /*nonpointer=maybe*/);

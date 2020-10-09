@@ -104,6 +104,7 @@ typedef objc::DenseMap<DisguisedPtr<objc_object>,size_t,RefcountMapValuePurgeabl
 enum HaveOld { DontHaveOld = false, DoHaveOld = true };
 enum HaveNew { DontHaveNew = false, DoHaveNew = true };
 
+// 当isa中的`has_sidetable_rc`值为1时，此时引用计数是存储在SideTable结构体中
 struct SideTable {
     // 自旋锁，防止多线程访问安全
     spinlock_t slock;
@@ -1227,12 +1228,16 @@ objc_object::clearDeallocating_slow()
 {
     ASSERT(isa.nonpointer  &&  (isa.weakly_referenced || isa.has_sidetable_rc));
 
+    // 通过this指针找到对应的table
     SideTable& table = SideTables()[this];
     table.lock();
+    // 判断是否被弱引用指引用过
     if (isa.weakly_referenced) {
+        // 如果曾经被弱引用指针指向过，则从SideTable的weak_table中擦出自己
         weak_clear_no_lock(&table.weak_table, (id)this);
     }
     if (isa.has_sidetable_rc) {
+        // 如果使用了sidetable 引用计数，则从sidetable的引用计数表refcnts中将当前对象擦出erase
         table.refcnts.erase(this);
     }
     table.unlock();
